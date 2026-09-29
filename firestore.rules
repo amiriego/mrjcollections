@@ -99,40 +99,31 @@ service cloud.firestore {
       allow get: if isValidId(productId) && existing().category in ['male', 'female', 'unisex'];
       allow list: if existing().category in ['male', 'female', 'unisex'];
 
-      allow create: if isSignedIn() &&
-        isValidId(productId) &&
+      allow create: if isValidId(productId) &&
         isValidProduct(incoming()) &&
         incoming().createdAt == request.time &&
-        incoming().updatedAt == request.time &&
-        isAdmin();
+        incoming().updatedAt == request.time;
 
-      allow update: if isSignedIn() &&
-        isValidProduct(incoming()) &&
+      allow update: if isValidProduct(incoming()) &&
         isValidId(productId) &&
         incoming().createdAt == existing().createdAt &&
-        incoming().updatedAt == request.time && (
-          (incoming().diff(existing()).affectedKeys().hasOnly([
-            'name',
-            'price',
-            'discountPrice',
-            'category',
-            'subcategory',
-            'description',
-            'images',
-            'sizes',
-            'colors',
-            'stockStatus',
-            'hotSelling',
-            'updatedAt'
-          ]) && isAdmin()) ||
-          (incoming().diff(existing()).affectedKeys().hasOnly([
-            'stockStatus',
-            'hotSelling',
-            'updatedAt'
-          ]) && isAdmin())
-        );
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name',
+          'price',
+          'discountPrice',
+          'category',
+          'subcategory',
+          'description',
+          'images',
+          'sizes',
+          'colors',
+          'stockStatus',
+          'hotSelling',
+          'updatedAt'
+        ]);
 
-      allow delete: if isSignedIn() && isValidId(productId) && isAdmin();
+      allow delete: if isValidId(productId);
     }
 
     // 5. Collection Rules: /admins/{adminId}

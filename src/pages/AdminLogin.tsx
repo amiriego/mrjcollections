@@ -105,11 +105,17 @@ export const AdminLogin: React.FC = () => {
         navigate('/shop', { replace: true });
       }
     } catch (err: unknown) {
-      const msg =
+      const rawMsg =
         err instanceof Error
           ? err.message
           : 'Google authentication was cancelled or failed.';
-      setErrorMessage(msg);
+      if (rawMsg.includes('auth/unauthorized-domain')) {
+        setErrorMessage(
+          `To use Google Sign-In on "${window.location.hostname}", add "${window.location.hostname}" in Firebase Console → Authentication → Settings → Authorized domains (or sign in directly above using Email & Password).`
+        );
+      } else {
+        setErrorMessage(rawMsg);
+      }
     } finally {
       setSubmitting(false);
     }

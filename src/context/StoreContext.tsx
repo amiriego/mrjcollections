@@ -392,13 +392,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
-  const canWriteToFirestore = Boolean(
-    user &&
-      user.emailVerified &&
-      (user.email === 'amiri3x3@gmail.com' ||
-        user.email === 'admin@mrjcollections.com')
-  );
-
   const currentUserEmail =
     user?.email || localAdminEmail || localUserSession?.email || null;
   const currentUserName =
@@ -413,6 +406,46 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
       (localUserSession && isEmailAdmin(localUserSession.email))
   );
   const adminEmail = isAdminAuthenticated ? currentUserEmail : null;
+  const canWriteToFirestore = isAdminAuthenticated;
+
+  // Automatically sync any locally created admin products to Cloud Firestore so all visitors see them
+  useEffect(() => {
+    if (!canWriteToFirestore || loadingProducts) return;
+    const firestoreIds = new Set(firestoreProducts.map((p) => p.id));
+    const unsynced = localProducts.filter(
+      (p) =>
+        !firestoreIds.has(p.id) &&
+        (hasLocalEdits || firestoreProducts.length === 0)
+    );
+    if (unsynced.length === 0) return;
+
+    let cancelled = false;
+    (async () => {
+      for (const item of unsynced) {
+        if (cancelled) break;
+        try {
+          const sanitized = sanitizeProductInput(item);
+          await setDoc(doc(db, 'products', item.id), {
+            ...sanitized,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+        } catch {
+          // ignore individual sync errors
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    canWriteToFirestore,
+    loadingProducts,
+    firestoreProducts,
+    localProducts,
+    hasLocalEdits,
+  ]);
 
   const getLocalRegisteredAccounts = useCallback((): RegisteredAccount[] => {
     try {
@@ -656,13 +689,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [canWriteToFirestore, saveLocalProducts, showToast]);
 
   const activeCatalog =
-    canWriteToFirestore && firestoreProducts.length > 0
-      ? firestoreProducts
-      : hasLocalEdits
-      ? localProducts
-      : firestoreProducts.length > 0
-      ? firestoreProducts
-      : localProducts;
+    firestoreProducts.length > 0 ? firestoreProducts : localProducts;
 
   const addProduct = useCallback(
     async (input: ProductInput) => {
@@ -695,7 +722,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       }
 
-      showToast(`Added "${sanitized.name}" to catalog`);
+      showToast(`Published "${sanitized.name}" live to store`);
     },
     [canWriteToFirestore, activeCatalog, saveLocalProducts, showToast]
   );
@@ -719,16 +746,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
       );
       saveLocalProducts(updatedList);
 
-      if (
-        canWriteToFirestore &&
-        firestoreProducts.some((item) => item.id === id)
-      ) {
+      if (canWriteToFirestore) {
         const path = `products/${id}`;
         try {
-          await updateDoc(doc(db, 'products', id), {
-            ...sanitized,
-            updatedAt: serverTimestamp(),
-          });
+          if (firestoreProducts.some((item) => item.id === id)) {
+            await updateDoc(doc(db, 'products', id), {
+              ...sanitized,
+              updatedAt: serverTimestamp(),
+            });
+          } else {
+            await setDoc(doc(db, 'products', id), {
+              ...sanitized,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            });
+          }
         } catch (error) {
           handleFirestoreError(error, OperationType.UPDATE, path);
         }
@@ -754,10 +786,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
       const filtered = activeCatalog.filter((item) => item.id !== id);
       saveLocalProducts(filtered);
 
-      if (
-        canWriteToFirestore &&
-        firestoreProducts.some((item) => item.id === id)
-      ) {
+      if (canWriteToFirestore) {
         const path = `products/${id}`;
         try {
           await deleteDoc(doc(db, 'products', id));
@@ -770,13 +799,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
         target ? `Deleted "${target.name}"` : 'Product deleted from catalog'
       );
     },
-    [
-      canWriteToFirestore,
-      firestoreProducts,
-      activeCatalog,
-      saveLocalProducts,
-      showToast,
-    ]
+    [canWriteToFirestore, activeCatalog, saveLocalProducts, showToast]
   );
 
   const products = activeCatalog;

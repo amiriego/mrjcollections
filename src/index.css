@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-display: 'Syne', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #F6F5F0;
+    color: #0A0A0A;
+    overflow-x: hidden;
+  }
+
+  h1, h2, .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-mono-tabular {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Signature Off-White™ inspired architectural diagonal hazard stripe pattern */
+.offwhite-stripes {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    #0A0A0A,
+    #0A0A0A 10px,
+    transparent 10px,
+    transparent 20px
+  );
+}
+
+.offwhite-stripes-light {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    #F6F5F0,
+    #F6F5F0 8px,
+    transparent 8px,
+    transparent 16px
+  );
+}
+
+.offwhite-stripes-gold {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    #C5A059,
+    #C5A059 8px,
+    #0A0A0A 8px,
+    #0A0A0A 16px
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

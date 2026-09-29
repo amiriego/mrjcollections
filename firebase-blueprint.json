@@ -1,0 +1,129 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "A fashion retail item in the Mr. J Collections catalog.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Display name of the fashion product.",
+          "minLength": 1,
+          "maxLength": 150
+        },
+        "price": {
+          "type": "number",
+          "description": "Regular price in Ghana Cedis (GH₵)."
+        },
+        "discountPrice": {
+          "type": "number",
+          "description": "Optional promotional price in Ghana Cedis (GH₵)."
+        },
+        "category": {
+          "type": "string",
+          "description": "Primary demographic category of the product.",
+          "enum": ["male", "female", "unisex"],
+          "minLength": 4,
+          "maxLength": 20
+        },
+        "subcategory": {
+          "type": "string",
+          "description": "Specific apparel or accessory subcategory.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed product description, fabric, and fit notes.",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "images": {
+          "type": "array",
+          "description": "List of product image URLs (1 to 10 items)."
+        },
+        "sizes": {
+          "type": "array",
+          "description": "Optional list of available sizes."
+        },
+        "colors": {
+          "type": "array",
+          "description": "Optional list of available colorways."
+        },
+        "stockStatus": {
+          "type": "string",
+          "description": "Current inventory availability.",
+          "enum": ["in_stock", "out_of_stock"],
+          "minLength": 8,
+          "maxLength": 20
+        },
+        "hotSelling": {
+          "type": "boolean",
+          "description": "Whether the item is featured in the Hot Selling collection."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the product was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the product was last updated."
+        }
+      },
+      "required": [
+        "name",
+        "price",
+        "discountPrice",
+        "category",
+        "subcategory",
+        "description",
+        "images",
+        "sizes",
+        "colors",
+        "stockStatus",
+        "hotSelling",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Authorized store administrator record.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the administrator.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "role": {
+          "type": "string",
+          "description": "Assigned role identifier.",
+          "enum": ["admin"],
+          "minLength": 5,
+          "maxLength": 5
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the admin record was created."
+        }
+      },
+      "required": ["uid", "role", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Storefront catalog of fashion products managed by the administrator."
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/Admin" },
+      "description": "Registry of verified store administrator UIDs."
+    }
+  }
+}

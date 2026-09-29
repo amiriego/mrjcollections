@@ -1,0 +1,154 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net (Default-Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Global Hardened Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'amiri3x3@gmail.com' ||
+        request.auth.token.email == 'admin@mrjcollections.com'
+      );
+    }
+
+    // 3. Entity Validation Blueprints
+    function isValidProduct(data) {
+      return data.keys().hasAll([
+          'name',
+          'price',
+          'discountPrice',
+          'category',
+          'subcategory',
+          'description',
+          'images',
+          'sizes',
+          'colors',
+          'stockStatus',
+          'hotSelling',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'name',
+          'price',
+          'discountPrice',
+          'category',
+          'subcategory',
+          'description',
+          'images',
+          'sizes',
+          'colors',
+          'stockStatus',
+          'hotSelling',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 150 &&
+        (data.price is int || data.price is float) && data.price >= 0 && data.price <= 1000000 &&
+        (data.discountPrice == null || ((data.discountPrice is int || data.discountPrice is float) && data.discountPrice >= 0 && data.discountPrice <= 1000000)) &&
+        data.category is string && data.category.size() >= 4 && data.category.size() <= 20 && data.category in ['male', 'female', 'unisex'] &&
+        data.subcategory is string && data.subcategory.size() >= 1 && data.subcategory.size() <= 80 &&
+        data.description is string && data.description.size() >= 1 && data.description.size() <= 2000 &&
+        data.images is list && data.images.size() >= 1 && data.images.size() <= 10 &&
+        data.images[0] is string && data.images[0].size() >= 1 && data.images[0].size() <= 500000 &&
+        (data.sizes == null || (data.sizes is list && data.sizes.size() <= 15 && (data.sizes.size() == 0 || (data.sizes[0] is string && data.sizes[0].size() >= 1 && data.sizes[0].size() <= 40)))) &&
+        (data.colors == null || (data.colors is list && data.colors.size() <= 15 && (data.colors.size() == 0 || (data.colors[0] is string && data.colors[0].size() >= 1 && data.colors[0].size() <= 40)))) &&
+        data.stockStatus is string && data.stockStatus.size() >= 8 && data.stockStatus.size() <= 20 && data.stockStatus in ['in_stock', 'out_of_stock'] &&
+        data.hotSelling is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidAdmin(data) {
+      return data.keys().hasAll(['uid', 'role', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'role', 'createdAt']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.uid == request.auth.uid &&
+        data.role is string && data.role.size() == 5 && data.role == 'admin' &&
+        data.createdAt is timestamp;
+    }
+
+    // 4. Collection Rules: /products/{productId}
+    match /products/{productId} {
+      allow get: if isValidId(productId) && existing().category in ['male', 'female', 'unisex'];
+      allow list: if existing().category in ['male', 'female', 'unisex'];
+
+      allow create: if isSignedIn() &&
+        isValidId(productId) &&
+        isValidProduct(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+
+      allow update: if isSignedIn() &&
+        isValidProduct(incoming()) &&
+        isValidId(productId) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          (incoming().diff(existing()).affectedKeys().hasOnly([
+            'name',
+            'price',
+            'discountPrice',
+            'category',
+            'subcategory',
+            'description',
+            'images',
+            'sizes',
+            'colors',
+            'stockStatus',
+            'hotSelling',
+            'updatedAt'
+          ]) && isAdmin()) ||
+          (incoming().diff(existing()).affectedKeys().hasOnly([
+            'stockStatus',
+            'hotSelling',
+            'updatedAt'
+          ]) && isAdmin())
+        );
+
+      allow delete: if isSignedIn() && isValidId(productId) && isAdmin();
+    }
+
+    // 5. Collection Rules: /admins/{adminId}
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && isValidId(adminId) && (request.auth.uid == adminId || isAdmin());
+      allow list: if false;
+
+      allow create: if isSignedIn() &&
+        isValidId(adminId) &&
+        adminId == request.auth.uid &&
+        isValidAdmin(incoming()) &&
+        incoming().createdAt == request.time &&
+        isAdmin();
+
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}

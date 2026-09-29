@@ -1,0 +1,6 @@
+{
+  "name": "Mr. J Collections | Quality & Affordable Fashion in Tarkwa",
+  "description": "Shop quality and affordable male, female and unisex fashion items from Mr. J Collections in Tarkwa. Sneakers, slides, perfumes, bags, wigs, watches and more. Nationwide delivery across Ghana.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

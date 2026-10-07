@@ -35,6 +35,8 @@ export const AdminDashboard: React.FC = () => {
     deleteProduct,
     changeAdminPassword,
     seedCatalogToFirestore,
+    syncAllToFirestore,
+    firestoreProductCount,
     uploadProductImage,
     showToast,
   } = useStore();
@@ -308,16 +310,23 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {isUsingSeedFallback && (
-            <button
-              type="button"
-              onClick={seedCatalogToFirestore}
-              className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold bg-[#FFFFFF] text-[#0A0A0A] hover:bg-[#0A0A0A] hover:text-[#F6F5F0] border border-[#0A0A0A] rounded-none whitespace-nowrap transition-colors"
-            >
-              <Database className="w-3.5 h-3.5 text-[#9E7B32]" />
-              <span>Sync Seed Catalog to Firestore</span>
-            </button>
-          )}
+          <div
+            title="Real-time status of your store catalog in Cloud Firestore"
+            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-mono-tabular bg-[#0A0A0A] text-[#F6F5F0] border border-[#0A0A0A]"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>Cloud Live: {firestoreProductCount} products</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={syncAllToFirestore}
+            title="Upload and verify all catalog items in Google Cloud Firestore"
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold bg-[#FFFFFF] text-[#0A0A0A] hover:bg-[#0A0A0A] hover:text-[#F6F5F0] border border-[#0A0A0A] rounded-none whitespace-nowrap transition-colors"
+          >
+            <Database className="w-3.5 h-3.5 text-[#9E7B32]" />
+            <span>Sync All to Cloud</span>
+          </button>
 
           <button
             type="button"

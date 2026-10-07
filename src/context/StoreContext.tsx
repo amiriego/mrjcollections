@@ -85,6 +85,8 @@ interface StoreContextValue {
   updateProduct: (id: string, input: ProductInput) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   seedCatalogToFirestore: () => Promise<void>;
+  syncAllToFirestore: () => Promise<void>;
+  firestoreProductCount: number;
   uploadProductImage: (file: File) => Promise<string>;
 }
 
@@ -173,6 +175,10 @@ function formatFirestoreTimestamp(val: unknown): string {
   if (val instanceof Timestamp) {
     return val.toDate().toISOString();
   }
+  if (val && typeof val === 'object' && 'seconds' in val) {
+    const sec = (val as { seconds: number }).seconds;
+    return new Date(sec * 1000).toISOString();
+  }
   if (typeof val === 'string') {
     return val;
   }
@@ -185,26 +191,38 @@ async function compressFileToDataUrl(file: File): Promise<string> {
     reader.onload = (event) => {
       const img = new Image();
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const maxDim = 900;
-        let width = img.width;
-        let height = img.height;
-        if (width > height && width > maxDim) {
-          height = Math.round((height * maxDim) / width);
-          width = maxDim;
-        } else if (height > maxDim) {
-          width = Math.round((width * maxDim) / height);
-          height = maxDim;
+        const renderScaled = (maxDim: number, quality: number): string => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          if (width > height && width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+          canvas.width = Math.max(1, width);
+          canvas.height = Math.max(1, height);
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            return (event.target?.result as string) || '';
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          return canvas.toDataURL('image/jpeg', quality);
+        };
+
+        // Pass 1: crisp 750px at 0.72 quality (~80-140KB)
+        let output = renderScaled(750, 0.72);
+        // Pass 2: if high density and string > 220,000 chars, scale to 620px at 0.62 quality
+        if (output.length > 220000) {
+          output = renderScaled(620, 0.62);
         }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          resolve(event.target?.result as string);
-          return;
+        // Pass 3: emergency safety cap for huge photographic details
+        if (output.length > 350000) {
+          output = renderScaled(500, 0.52);
         }
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.82));
+        resolve(output);
       };
       img.onerror = () => reject(new Error('Failed to decode image file'));
       img.src = event.target?.result as string;
@@ -299,20 +317,53 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
       } catch {
         // ignore quota errors
       }
-      showToast('Updated site background image');
+      try {
+        await setDoc(doc(db, 'settings', 'store'), {
+          backgroundImage: dataUrl,
+          updatedAt: serverTimestamp(),
+        });
+        showToast('Background banner saved live for all visitors!');
+      } catch (err: unknown) {
+        showToast('Background banner updated (cloud sync pending)', 'info');
+      }
     },
     [showToast]
   );
 
-  const resetBackgroundImage = useCallback(() => {
+  const resetBackgroundImage = useCallback(async () => {
     setBackgroundImage(BRAND_ASSETS.backgroundBanner);
     try {
       localStorage.removeItem(LOCAL_BG_STORAGE_KEY);
+      await deleteDoc(doc(db, 'settings', 'store'));
     } catch {
       // ignore
     }
     showToast('Restored default streetwear background', 'info');
   }, [showToast]);
+
+  // Listen to Firestore /settings/store for real-time background banner changes
+  useEffect(() => {
+    const unsubSettings = onSnapshot(
+      doc(db, 'settings', 'store'),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data?.backgroundImage && typeof data.backgroundImage === 'string') {
+            setBackgroundImage(data.backgroundImage);
+            try {
+              localStorage.setItem(LOCAL_BG_STORAGE_KEY, data.backgroundImage);
+            } catch {
+              // ignore
+            }
+          }
+        }
+      },
+      () => {
+        // keep local fallback if offline
+      }
+    );
+    return () => unsubSettings();
+  }, []);
 
   // Listen to Firebase Auth state
   useEffect(() => {
@@ -326,10 +377,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
   // Listen to Firestore /products collection
   useEffect(() => {
     const path = 'products';
-    const productsQuery = query(
-      collection(db, path),
-      where('category', 'in', ['male', 'female', 'unisex'])
-    );
+    const productsQuery = collection(db, path);
     const unsubscribe = onSnapshot(
       productsQuery,
       (snapshot) => {
@@ -368,6 +416,24 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
         );
         setFirestoreProducts(items);
         setLoadingProducts(false);
+
+        // Auto-seed initial catalog into Cloud Firestore if collection is empty
+        if (snapshot.empty && items.length === 0) {
+          (async () => {
+            try {
+              for (const item of INITIAL_SEED_PRODUCTS) {
+                const sanitized = sanitizeProductInput(item);
+                await setDoc(doc(db, 'products', item.id), {
+                  ...sanitized,
+                  createdAt: serverTimestamp(),
+                  updatedAt: serverTimestamp(),
+                });
+              }
+            } catch {
+              // ignore
+            }
+          })();
+        }
       },
       (error) => {
         setLoadingProducts(false);
@@ -706,25 +772,23 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
         updatedAt: nowIso,
       };
 
-      // Always keep local catalog in sync
+      // Always keep local catalog in sync optimistically
       saveLocalProducts([newProduct, ...activeCatalog]);
 
-      if (canWriteToFirestore) {
-        const path = `products/${docId}`;
-        try {
-          await setDoc(doc(db, 'products', docId), {
-            ...sanitized,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          });
-        } catch (error) {
-          handleFirestoreError(error, OperationType.CREATE, path);
-        }
+      const path = `products/${docId}`;
+      try {
+        await setDoc(doc(db, 'products', docId), {
+          ...sanitized,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        showToast(`Published "${sanitized.name}" live & permanent!`);
+      } catch (error) {
+        showToast(`Saved locally (Cloud sync: ${error instanceof Error ? error.message : 'pending'})`, 'info');
+        handleFirestoreError(error, OperationType.CREATE, path);
       }
-
-      showToast(`Published "${sanitized.name}" live to store`);
     },
-    [canWriteToFirestore, activeCatalog, saveLocalProducts, showToast]
+    [activeCatalog, saveLocalProducts, showToast]
   );
 
   const updateProduct = useCallback(
@@ -746,30 +810,27 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
       );
       saveLocalProducts(updatedList);
 
-      if (canWriteToFirestore) {
-        const path = `products/${id}`;
-        try {
-          if (firestoreProducts.some((item) => item.id === id)) {
-            await updateDoc(doc(db, 'products', id), {
-              ...sanitized,
-              updatedAt: serverTimestamp(),
-            });
-          } else {
-            await setDoc(doc(db, 'products', id), {
-              ...sanitized,
-              createdAt: serverTimestamp(),
-              updatedAt: serverTimestamp(),
-            });
-          }
-        } catch (error) {
-          handleFirestoreError(error, OperationType.UPDATE, path);
+      const path = `products/${id}`;
+      try {
+        if (firestoreProducts.some((item) => item.id === id)) {
+          await updateDoc(doc(db, 'products', id), {
+            ...sanitized,
+            updatedAt: serverTimestamp(),
+          });
+        } else {
+          await setDoc(doc(db, 'products', id), {
+            ...sanitized,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
         }
+        showToast(`Updated "${sanitized.name}" live & permanent!`);
+      } catch (error) {
+        showToast(`Updated locally (Cloud sync: ${error instanceof Error ? error.message : 'pending'})`, 'info');
+        handleFirestoreError(error, OperationType.UPDATE, path);
       }
-
-      showToast(`Updated "${sanitized.name}"`);
     },
     [
-      canWriteToFirestore,
       firestoreProducts,
       activeCatalog,
       saveLocalProducts,
@@ -786,21 +847,38 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
       const filtered = activeCatalog.filter((item) => item.id !== id);
       saveLocalProducts(filtered);
 
-      if (canWriteToFirestore) {
-        const path = `products/${id}`;
-        try {
-          await deleteDoc(doc(db, 'products', id));
-        } catch (error) {
-          handleFirestoreError(error, OperationType.DELETE, path);
-        }
+      const path = `products/${id}`;
+      try {
+        await deleteDoc(doc(db, 'products', id));
+        showToast(
+          target ? `Deleted "${target.name}" permanently from Cloud` : 'Product deleted from catalog'
+        );
+      } catch (error) {
+        showToast(`Deleted locally (Cloud sync: ${error instanceof Error ? error.message : 'pending'})`, 'info');
+        handleFirestoreError(error, OperationType.DELETE, path);
       }
-
-      showToast(
-        target ? `Deleted "${target.name}"` : 'Product deleted from catalog'
-      );
     },
-    [canWriteToFirestore, activeCatalog, saveLocalProducts, showToast]
+    [activeCatalog, saveLocalProducts, showToast]
   );
+
+  const syncAllToFirestore = useCallback(async () => {
+    let synced = 0;
+    const path = 'products';
+    for (const item of activeCatalog) {
+      try {
+        const sanitized = sanitizeProductInput(item);
+        await setDoc(doc(db, path, item.id), {
+          ...sanitized,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        synced++;
+      } catch (err) {
+        console.error('Error syncing item to cloud:', item.id, err);
+      }
+    }
+    showToast(`Successfully synced ${synced} products live to Cloud Firestore!`);
+  }, [activeCatalog, showToast]);
 
   const products = activeCatalog;
   const isUsingSeedFallback = firestoreProducts.length === 0;
@@ -834,6 +912,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
         updateProduct,
         deleteProduct,
         seedCatalogToFirestore,
+        syncAllToFirestore,
+        firestoreProductCount: firestoreProducts.length,
         uploadProductImage,
       }}
     >

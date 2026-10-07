@@ -76,7 +76,7 @@ service cloud.firestore {
         data.subcategory is string && data.subcategory.size() >= 1 && data.subcategory.size() <= 80 &&
         data.description is string && data.description.size() >= 1 && data.description.size() <= 2000 &&
         data.images is list && data.images.size() >= 1 && data.images.size() <= 10 &&
-        data.images[0] is string && data.images[0].size() >= 1 && data.images[0].size() <= 500000 &&
+        data.images[0] is string && data.images[0].size() >= 1 && data.images[0].size() <= 1000000 &&
         (data.sizes == null || (data.sizes is list && data.sizes.size() <= 15 && (data.sizes.size() == 0 || (data.sizes[0] is string && data.sizes[0].size() >= 1 && data.sizes[0].size() <= 40)))) &&
         (data.colors == null || (data.colors is list && data.colors.size() <= 15 && (data.colors.size() == 0 || (data.colors[0] is string && data.colors[0].size() >= 1 && data.colors[0].size() <= 40)))) &&
         data.stockStatus is string && data.stockStatus.size() >= 8 && data.stockStatus.size() <= 20 && data.stockStatus in ['in_stock', 'out_of_stock'] &&
@@ -94,10 +94,16 @@ service cloud.firestore {
         data.createdAt is timestamp;
     }
 
+    function isValidSettings(data) {
+      return data.keys().hasAll(['updatedAt']) &&
+        data.keys().hasOnly(['backgroundImage', 'updatedAt']) &&
+        (data.backgroundImage == null || (data.backgroundImage is string && data.backgroundImage.size() >= 1 && data.backgroundImage.size() <= 1000000)) &&
+        data.updatedAt is timestamp;
+    }
+
     // 4. Collection Rules: /products/{productId}
     match /products/{productId} {
-      allow get: if isValidId(productId) && existing().category in ['male', 'female', 'unisex'];
-      allow list: if existing().category in ['male', 'female', 'unisex'];
+      allow get, list: if true;
 
       allow create: if isValidId(productId) &&
         isValidProduct(incoming()) &&
@@ -140,6 +146,18 @@ service cloud.firestore {
 
       allow update: if false;
       allow delete: if false;
+    }
+
+    // 6. Collection Rules: /settings/{settingId}
+    match /settings/{settingId} {
+      allow get: if isValidId(settingId);
+      allow list: if false;
+
+      allow create, update: if isValidId(settingId) &&
+        isValidSettings(incoming()) &&
+        incoming().updatedAt == request.time;
+
+      allow delete: if isValidId(settingId);
     }
   }
 }

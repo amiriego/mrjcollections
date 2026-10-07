@@ -114,6 +114,25 @@
         }
       },
       "required": ["uid", "role", "createdAt"]
+    },
+    "StoreSettings": {
+      "title": "StoreSettings",
+      "description": "Global storefront appearance and configuration settings.",
+      "type": "object",
+      "properties": {
+        "backgroundImage": {
+          "type": "string",
+          "description": "Compressed background banner image data URL or asset path.",
+          "minLength": 1,
+          "maxLength": 1000000
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the store settings were updated."
+        }
+      },
+      "required": ["updatedAt"]
     }
   },
   "firestore": {
@@ -124,6 +143,10 @@
     "/admins/{adminId}": {
       "schema": { "$ref": "#/entities/Admin" },
       "description": "Registry of verified store administrator UIDs."
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/StoreSettings" },
+      "description": "Global store settings including background banners and theme assets."
     }
   }
 }

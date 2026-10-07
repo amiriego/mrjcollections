@@ -431,6 +431,62 @@ export const Home: React.FC = () => {
           </div>
         )}
       </section>
+
+      {/* Section 4: Latest Arrivals / New Drops */}
+      <section className="max-w-[1440px] mx-auto px-5 sm:px-8 space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#0A0A0A] pb-5">
+          <div>
+            <p className="text-xs font-mono-tabular text-[#9E7B32] mb-1">
+              03. New In Store · Live Collection
+            </p>
+            <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-[#0A0A0A]">
+              "LATEST ARRIVALS"
+            </h2>
+          </div>
+          <Link
+            to="/shop"
+            className="inline-flex items-center gap-2 text-xs font-bold text-[#0A0A0A] hover:text-[#9E7B32] transition-colors whitespace-nowrap"
+          >
+            <span>Browse All {products.length} Items</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+
+        {loadingProducts ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <div
+                key={n}
+                className="aspect-[4/4] bg-[#EAE8E1] border border-[#0A0A0A] rounded-none animate-pulse"
+              />
+            ))}
+          </div>
+        ) : products.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+            {products.slice(0, 9).map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        ) : (
+          <div className="bg-[#FFFFFF] border border-[#0A0A0A] p-10 text-center rounded-none space-y-4">
+            <p className="text-base font-medium text-[#0A0A0A]">
+              Catalog is loading from Cloud...
+            </p>
+          </div>
+        )}
+
+        {products.length > 9 && (
+          <div className="text-center pt-4">
+            <Link
+              to="/shop"
+              className="inline-flex items-center gap-2 px-8 py-4 text-xs font-bold tracking-wider bg-[#0A0A0A] text-[#F6F5F0] hover:bg-[#C5A059] hover:text-[#0A0A0A] border border-[#0A0A0A] transition-colors rounded-none"
+            >
+              <span>"EXPLORE ALL {products.length} PRODUCTS"</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        )}
+      </section>
     </div>
   );
 };

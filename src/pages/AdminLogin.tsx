@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Lock, UserPlus, ArrowLeft, LogOut } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
-import { BUSINESS_INFO } from '../types';
-import { BrandBagEmblem } from '../components/BrandLogo';
+import { StoreLogo } from '../components/BrandLogo';
 
 export const AdminLogin: React.FC = () => {
   const {
@@ -16,6 +15,8 @@ export const AdminLogin: React.FC = () => {
     loginWithGoogle,
     logout,
     showToast,
+    siteName,
+    logoUrl,
   } = useStore();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -126,13 +127,17 @@ export const AdminLogin: React.FC = () => {
       <div className="w-full max-w-md bg-[#FFFFFF] border-2 border-[#0A0A0A] p-7 sm:p-9 rounded-none space-y-6">
         {/* Brand Header */}
         <div className="flex flex-col items-center text-center space-y-3">
-          <BrandBagEmblem className="w-16 h-16 border border-[#0A0A0A]" />
+          <StoreLogo
+            className="w-16 h-16 border border-[#0A0A0A]"
+            logoUrl={logoUrl}
+            siteName={siteName}
+          />
           <div>
             <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-[#0A0A0A]">
               {mode === 'signin' ? '"SIGN IN"' : '"SIGN UP"'}
             </h1>
             <p className="text-xs font-mono-tabular text-[#52514E] mt-1">
-              {BUSINESS_INFO.name} · Account Access
+              {siteName} · Account Access
             </p>
           </div>
         </div>

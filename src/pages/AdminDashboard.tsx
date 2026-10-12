@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import {
   Plus,
@@ -10,8 +10,17 @@ import {
   Upload,
   X,
   Database,
+  Settings,
+  MessageCircle,
+  Phone,
+  ExternalLink,
+  RotateCcw,
+  ShoppingBag,
+  CheckCircle2,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
+import { StoreLogo } from '../components/BrandLogo';
 import {
   Category,
   Product,
@@ -20,6 +29,7 @@ import {
   SUBCATEGORIES,
   VALIDATION_LIMITS,
   formatPrice,
+  formatWhatsAppUrl,
 } from '../types';
 
 export const AdminDashboard: React.FC = () => {
@@ -39,6 +49,17 @@ export const AdminDashboard: React.FC = () => {
     firestoreProductCount,
     uploadProductImage,
     showToast,
+    siteName,
+    logoUrl,
+    whatsappNumber,
+    phone,
+    backgroundImage,
+    updateStoreSettings,
+    uploadLogo,
+    resetLogo,
+    updateBackgroundImage,
+    resetBackgroundImage,
+    getWhatsAppChatLink,
   } = useStore();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -70,6 +91,88 @@ export const AdminDashboard: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [updatingPassword, setUpdatingPassword] = useState(false);
+
+  const [activeTab, setActiveTab] = useState<'catalog' | 'settings'>('catalog');
+  const [draftSiteName, setDraftSiteName] = useState(siteName);
+  const [draftWhatsApp, setDraftWhatsApp] = useState(whatsappNumber);
+  const [draftPhone, setDraftPhone] = useState(phone);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+
+  useEffect(() => {
+    setDraftSiteName(siteName);
+  }, [siteName]);
+
+  useEffect(() => {
+    setDraftWhatsApp(whatsappNumber);
+  }, [whatsappNumber]);
+
+  useEffect(() => {
+    setDraftPhone(phone);
+  }, [phone]);
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!draftSiteName.trim()) {
+      showToast('Site brand name cannot be empty.', 'error');
+      return;
+    }
+    if (!draftWhatsApp.trim()) {
+      showToast('WhatsApp number cannot be empty.', 'error');
+      return;
+    }
+    setSavingSettings(true);
+    try {
+      await updateStoreSettings({
+        siteName: draftSiteName,
+        whatsappNumber: draftWhatsApp,
+        phone: draftPhone,
+      });
+      showToast('Store settings & brand identity updated live!');
+    } catch (err: unknown) {
+      showToast(
+        err instanceof Error ? err.message : 'Error updating store settings',
+        'error'
+      );
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      await uploadLogo(file);
+    } catch (err: unknown) {
+      showToast(
+        err instanceof Error ? err.message : 'Error uploading logo image',
+        'error'
+      );
+    } finally {
+      setUploadingLogo(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingBanner(true);
+    try {
+      await updateBackgroundImage(file);
+    } catch (err: unknown) {
+      showToast(
+        err instanceof Error ? err.message : 'Error uploading banner image',
+        'error'
+      );
+    } finally {
+      setUploadingBanner(false);
+      e.target.value = '';
+    }
+  };
 
   const stats = useMemo(() => {
     return {
@@ -357,7 +460,352 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Overview Counts */}
+      {/* Tab Switcher */}
+      <div className="flex flex-wrap items-center gap-2 border-b-2 border-[#0A0A0A]">
+        <button
+          type="button"
+          onClick={() => setActiveTab('catalog')}
+          className={`flex items-center gap-2.5 px-6 py-3.5 text-xs font-bold tracking-wider uppercase transition-colors border-t border-l border-r border-[#0A0A0A] ${
+            activeTab === 'catalog'
+              ? 'bg-[#0A0A0A] text-[#F6F5F0]'
+              : 'bg-[#FFFFFF] text-[#52514E] hover:text-[#0A0A0A] hover:bg-[#F6F5F0]'
+          }`}
+        >
+          <ShoppingBag className="w-4 h-4 text-[#C5A059]" />
+          <span>Product Catalog ({products.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('settings')}
+          className={`flex items-center gap-2.5 px-6 py-3.5 text-xs font-bold tracking-wider uppercase transition-colors border-t border-l border-r border-[#0A0A0A] ${
+            activeTab === 'settings'
+              ? 'bg-[#0A0A0A] text-[#F6F5F0]'
+              : 'bg-[#FFFFFF] text-[#52514E] hover:text-[#0A0A0A] hover:bg-[#F6F5F0]'
+          }`}
+        >
+          <Settings className="w-4 h-4 text-[#C5A059]" />
+          <span>Site Brand, Logo &amp; WhatsApp Settings</span>
+        </button>
+      </div>
+
+      {activeTab === 'settings' ? (
+        <div className="space-y-8">
+          {/* Header Note */}
+          <div className="bg-[#FFFFFF] border border-[#0A0A0A] p-6 sm:p-7 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#0A0A0A]/15 pb-4">
+              <div>
+                <p className="text-xs font-mono-tabular text-[#9E7B32]">
+                  Live Store Identity &amp; Contact Line
+                </p>
+                <h2 className="font-display text-2xl font-extrabold text-[#0A0A0A]">
+                  "BRAND &amp; WHATSAPP CONTROLS"
+                </h2>
+              </div>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-mono-tabular bg-[#0A0A0A] text-[#F6F5F0]">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Direct Cloud Sync</span>
+              </div>
+            </div>
+            <p className="text-sm text-[#52514E] leading-relaxed">
+              Updates made here are permanently saved to Google Cloud Firestore and immediately update across
+              all customer-facing pages (Navbar header, Hero banner, Footer copyright, and pre-filled WhatsApp order messages).
+            </p>
+          </div>
+
+          <form onSubmit={handleSaveSettings} className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              
+              {/* Card 1: Site Brand Name */}
+              <div className="bg-[#FFFFFF] border border-[#0A0A0A] p-6 sm:p-7 flex flex-col justify-between space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2.5 border-b border-[#0A0A0A]/15 pb-3">
+                    <span className="w-7 h-7 bg-[#0A0A0A] text-[#C5A059] flex items-center justify-center font-bold text-xs">
+                      1
+                    </span>
+                    <div>
+                      <h3 className="font-display text-lg font-bold text-[#0A0A0A]">
+                        "SITE BRAND NAME"
+                      </h3>
+                      <p className="text-xs text-[#52514E]">
+                        Changes your site name across navbar, footer, &amp; messages
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold text-[#0A0A0A] uppercase tracking-wider">
+                      Brand Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      maxLength={100}
+                      value={draftSiteName}
+                      onChange={(e) => setDraftSiteName(e.target.value)}
+                      placeholder='e.g. Mr.J collections TM or Mr. J Collections'
+                      className="w-full px-4 py-3 text-sm bg-[#F6F5F0] border border-[#0A0A0A] rounded-none text-[#0A0A0A] font-semibold focus:outline-none focus:bg-[#FFFFFF]"
+                    />
+                    <p className="text-xs text-[#686662]">
+                      Currently active on site: <strong className="text-[#0A0A0A]">"{siteName}™"</strong>
+                    </p>
+                  </div>
+
+                  {/* Real-time Preview */}
+                  <div className="p-4 bg-[#F6F5F0] border border-[#0A0A0A]/20 space-y-2.5">
+                    <p className="text-[11px] font-mono-tabular font-bold text-[#9E7B32] uppercase">
+                      Live Preview
+                    </p>
+                    <div className="flex items-center gap-2.5 bg-[#FFFFFF] p-3 border border-[#0A0A0A]/15">
+                      <StoreLogo className="w-8 h-8" logoUrl={logoUrl} siteName={draftSiteName} />
+                      <span className="font-display font-extrabold text-base text-[#0A0A0A]">
+                        {draftSiteName || 'Your Brand Name'}™
+                      </span>
+                    </div>
+                    <p className="text-xs text-[#52514E] font-mono-tabular">
+                      WhatsApp message header: "Hello {draftSiteName || 'Your Brand'}, I want to order..."
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: WhatsApp & Phone Link */}
+              <div className="bg-[#FFFFFF] border border-[#0A0A0A] p-6 sm:p-7 flex flex-col justify-between space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2.5 border-b border-[#0A0A0A]/15 pb-3">
+                    <span className="w-7 h-7 bg-[#0A0A0A] text-[#C5A059] flex items-center justify-center font-bold text-xs">
+                      2
+                    </span>
+                    <div>
+                      <h3 className="font-display text-lg font-bold text-[#0A0A0A]">
+                        "WHATSAPP LINE &amp; HOTLINE"
+                      </h3>
+                      <p className="text-xs text-[#52514E]">
+                        Linked to "BUY NOW", chat buttons, &amp; direct calls
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold text-[#0A0A0A] uppercase tracking-wider">
+                      WhatsApp Number (for Orders &amp; Chat) *
+                    </label>
+                    <div className="relative">
+                      <MessageCircle className="w-4 h-4 text-[#C5A059] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        required
+                        maxLength={35}
+                        value={draftWhatsApp}
+                        onChange={(e) => setDraftWhatsApp(e.target.value)}
+                        placeholder="e.g. 233594326515 or 0594326515"
+                        className="w-full pl-10 pr-4 py-3 text-sm bg-[#F6F5F0] border border-[#0A0A0A] rounded-none text-[#0A0A0A] font-mono-tabular focus:outline-none focus:bg-[#FFFFFF]"
+                      />
+                    </div>
+                    <p className="text-xs text-[#686662]">
+                      Accepts Ghana local (e.g. 0594326515) or international format (e.g. 233594326515).
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold text-[#0A0A0A] uppercase tracking-wider">
+                      Display Phone Number
+                    </label>
+                    <div className="relative">
+                      <Phone className="w-4 h-4 text-[#52514E] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        maxLength={35}
+                        value={draftPhone}
+                        onChange={(e) => setDraftPhone(e.target.value)}
+                        placeholder="e.g. 0594326515"
+                        className="w-full pl-10 pr-4 py-3 text-sm bg-[#F6F5F0] border border-[#0A0A0A] rounded-none text-[#0A0A0A] font-mono-tabular focus:outline-none focus:bg-[#FFFFFF]"
+                      />
+                    </div>
+                    <p className="text-xs text-[#686662]">
+                      Shown on the Contact page &amp; footer for direct customer telephone calls.
+                    </p>
+                  </div>
+
+                  {/* Test WhatsApp Link */}
+                  <div className="pt-2">
+                    <a
+                      href={formatWhatsAppUrl(
+                        draftWhatsApp,
+                        `Hello ${draftSiteName}, testing store WhatsApp connection!`
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold bg-[#F6F5F0] hover:bg-[#0A0A0A] text-[#0A0A0A] hover:text-[#F6F5F0] border border-[#0A0A0A] transition-colors rounded-none"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 text-[#C5A059]" />
+                      <span>Test WhatsApp Link on WhatsApp Web / App</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: Store Logo */}
+              <div className="bg-[#FFFFFF] border border-[#0A0A0A] p-6 sm:p-7 space-y-6">
+                <div className="flex items-center gap-2.5 border-b border-[#0A0A0A]/15 pb-3">
+                  <span className="w-7 h-7 bg-[#0A0A0A] text-[#C5A059] flex items-center justify-center font-bold text-xs">
+                    3
+                  </span>
+                  <div>
+                    <h3 className="font-display text-lg font-bold text-[#0A0A0A]">
+                      "STORE LOGO"
+                    </h3>
+                    <p className="text-xs text-[#52514E]">
+                      Upload your official custom logo or use the luxury emblem
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-6">
+                  {/* Current Active Logo Box */}
+                  <div className="w-28 h-28 bg-[#0A0A0A] border-2 border-[#C5A059] flex items-center justify-center p-2 relative shrink-0">
+                    <StoreLogo className="w-24 h-24" logoUrl={logoUrl} siteName={draftSiteName} />
+                  </div>
+
+                  <div className="space-y-3 flex-1 text-center sm:text-left">
+                    <div>
+                      <p className="text-xs font-bold text-[#0A0A0A]">
+                        Current Logo:{' '}
+                        <span className="font-mono-tabular text-[#9E7B32]">
+                          {logoUrl ? 'Custom Image Uploaded' : 'Default Gold Monogram Emblem'}
+                        </span>
+                      </p>
+                      <p className="text-xs text-[#52514E] mt-1">
+                        PNG (transparent recommended), JPG, or WEBP. Automatically optimized for ultra-fast load times.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                      <label className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold bg-[#0A0A0A] text-[#F6F5F0] hover:bg-[#C5A059] hover:text-[#0A0A0A] border border-[#0A0A0A] cursor-pointer transition-colors rounded-none">
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>{uploadingLogo ? 'Compressing & Uploading...' : 'Upload New Logo'}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLogoUpload}
+                          disabled={uploadingLogo}
+                          className="hidden"
+                        />
+                      </label>
+
+                      {logoUrl && (
+                        <button
+                          type="button"
+                          onClick={resetLogo}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-bold text-[#C62828] bg-[#FFEBEE] hover:bg-[#C62828] hover:text-white border border-[#C62828] transition-colors rounded-none"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>Reset to Gold Emblem</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 4: Store Hero Banner Wallpaper */}
+              <div className="bg-[#FFFFFF] border border-[#0A0A0A] p-6 sm:p-7 space-y-6">
+                <div className="flex items-center gap-2.5 border-b border-[#0A0A0A]/15 pb-3">
+                  <span className="w-7 h-7 bg-[#0A0A0A] text-[#C5A059] flex items-center justify-center font-bold text-xs">
+                    4
+                  </span>
+                  <div>
+                    <h3 className="font-display text-lg font-bold text-[#0A0A0A]">
+                      "HOMEPAGE BANNER WALLPAPER"
+                    </h3>
+                    <p className="text-xs text-[#52514E]">
+                      Update the hero streetwear background banner
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-6">
+                  {/* Banner Preview */}
+                  <div className="w-40 h-24 bg-[#0A0A0A] border border-[#0A0A0A] overflow-hidden shrink-0 relative">
+                    <img
+                      src={backgroundImage}
+                      alt="Current background preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  <div className="space-y-3 flex-1 text-center sm:text-left">
+                    <p className="text-xs text-[#52514E]">
+                      Displayed as the backdrop behind the homepage hero manifesto.
+                    </p>
+
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                      <label className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold bg-[#0A0A0A] text-[#F6F5F0] hover:bg-[#C5A059] hover:text-[#0A0A0A] border border-[#0A0A0A] cursor-pointer transition-colors rounded-none">
+                        <ImageIcon className="w-3.5 h-3.5" />
+                        <span>{uploadingBanner ? 'Uploading...' : 'Upload New Wallpaper'}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleBannerUpload}
+                          disabled={uploadingBanner}
+                          className="hidden"
+                        />
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={resetBackgroundImage}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-bold text-[#52514E] hover:text-[#0A0A0A] bg-[#F6F5F0] border border-[#0A0A0A] transition-colors rounded-none"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Default Wallpaper</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Bottom Save Bar */}
+            <div className="bg-[#FFFFFF] border-2 border-[#0A0A0A] p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h4 className="font-bold text-sm text-[#0A0A0A]">
+                  Save and Publish Brand Settings
+                </h4>
+                <p className="text-xs text-[#52514E]">
+                  Updates your site brand name, WhatsApp order number, and hotline across the store.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDraftSiteName(siteName);
+                    setDraftWhatsApp(whatsappNumber);
+                    setDraftPhone(phone);
+                  }}
+                  className="px-5 py-3 text-xs font-bold bg-[#F6F5F0] text-[#52514E] hover:text-[#0A0A0A] border border-[#0A0A0A] rounded-none transition-colors"
+                >
+                  Reset Form
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={savingSettings}
+                  className="inline-flex items-center gap-2 px-8 py-3 text-xs font-bold tracking-wider bg-[#0A0A0A] text-[#F6F5F0] hover:bg-[#C5A059] hover:text-[#0A0A0A] border border-[#0A0A0A] disabled:opacity-50 transition-colors rounded-none"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-[#C5A059]" />
+                  <span>{savingSettings ? 'Saving Live to Cloud...' : '"SAVE STORE SETTINGS"'}</span>
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      ) : (
+        <>
+          {/* Overview Counts */}
       <section aria-label="Inventory Overview">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           {[
@@ -517,6 +965,8 @@ export const AdminDashboard: React.FC = () => {
           </table>
         </div>
       </section>
+        </>
+      )}
 
       {/* Add / Edit Product Modal */}
       {isProductModalOpen && (

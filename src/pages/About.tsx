@@ -1,10 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, MessageCircle } from 'lucide-react';
-import { BUSINESS_INFO, getGenericWhatsAppLink } from '../types';
-import { BrandBagEmblem } from '../components/BrandLogo';
+import { BUSINESS_INFO } from '../types';
+import { StoreLogo } from '../components/BrandLogo';
+import { useStore } from '../context/StoreContext';
 
 export const About: React.FC = () => {
+  const { siteName, logoUrl, phone, getWhatsAppChatLink } = useStore();
   const pillars = [
     {
       index: '01.',
@@ -48,11 +50,11 @@ export const About: React.FC = () => {
             className="font-display text-4xl sm:text-5xl font-extrabold text-[#0A0A0A] leading-tight"
             style={{ textWrap: 'balance' }}
           >
-            "ABOUT {BUSINESS_INFO.name.toUpperCase()}"
+            "ABOUT {siteName.toUpperCase()}"
           </h1>
 
           <p className="text-base text-[#3D3C39] leading-relaxed max-w-[68ch]">
-            Welcome to <strong className="text-[#0A0A0A]">{BUSINESS_INFO.name}</strong>,
+            Welcome to <strong className="text-[#0A0A0A]">{siteName}</strong>,
             your trusted fashion plug based in{' '}
             <strong className="text-[#0A0A0A]">{BUSINESS_INFO.location}</strong>. We
             specialize in bringing you the freshest male, female, and unisex fashion
@@ -70,10 +72,10 @@ export const About: React.FC = () => {
         </div>
 
         <div className="lg:col-span-4 bg-[#0A0A0A] text-[#F6F5F0] p-10 flex flex-col items-center justify-center text-center space-y-5">
-          <BrandBagEmblem className="w-28 h-28" />
+          <StoreLogo className="w-28 h-28" logoUrl={logoUrl} siteName={siteName} />
           <div>
             <p className="font-display text-2xl font-bold text-[#F6F5F0]">
-              {BUSINESS_INFO.name}™
+              {siteName}™
             </p>
             <p className="text-xs font-mono-tabular text-[#C5A059] mt-1">
               "{BUSINESS_INFO.tagline}"
@@ -125,7 +127,7 @@ export const About: React.FC = () => {
             "READY TO ELEVATE YOUR DRIP?"
           </h2>
           <p className="text-sm text-[#D0CEC7]">
-            Explore our latest drops or message us directly on WhatsApp ({BUSINESS_INFO.phone}).
+            Explore our latest drops or message us directly on WhatsApp ({phone}).
           </p>
         </div>
 
@@ -138,7 +140,7 @@ export const About: React.FC = () => {
             <ArrowRight className="w-4 h-4" />
           </Link>
           <a
-            href={getGenericWhatsAppLink()}
+            href={getWhatsAppChatLink()}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-6 py-3.5 text-xs font-bold bg-transparent text-[#F6F5F0] hover:bg-white/10 border border-[#F6F5F0] transition-colors rounded-none whitespace-nowrap"

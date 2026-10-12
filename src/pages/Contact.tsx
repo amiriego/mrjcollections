@@ -4,7 +4,7 @@ import { BUSINESS_INFO, getGenericWhatsAppLink } from '../types';
 import { useStore } from '../context/StoreContext';
 
 export const Contact: React.FC = () => {
-  const { showToast } = useStore();
+  const { showToast, siteName, phone: storePhone, getWhatsAppChatLink } = useStore();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
@@ -21,8 +21,8 @@ export const Contact: React.FC = () => {
       return;
     }
 
-    const formattedEnquiry = `Hello Mr. J Collections, I have an enquiry:\n\nName: ${cleanName}\nPhone: ${cleanPhone}\nMessage: ${cleanMessage}`;
-    const waUrl = getGenericWhatsAppLink(formattedEnquiry);
+    const formattedEnquiry = `Hello ${siteName}, I have an enquiry:\n\nName: ${cleanName}\nPhone: ${cleanPhone}\nMessage: ${cleanMessage}`;
+    const waUrl = getWhatsAppChatLink(formattedEnquiry);
     setSubmittedLink(waUrl);
     showToast('Enquiry prepared! Click below to send via WhatsApp.');
   };
@@ -59,7 +59,7 @@ export const Contact: React.FC = () => {
             <div>
               <dt className="text-xs font-mono-tabular text-[#686662]">Business Name</dt>
               <dd className="text-base font-bold text-[#0A0A0A] mt-0.5">
-                {BUSINESS_INFO.name}
+                {siteName}
               </dd>
             </div>
 
@@ -81,12 +81,12 @@ export const Contact: React.FC = () => {
               <dt className="text-xs font-mono-tabular text-[#686662]">WhatsApp / Phone</dt>
               <dd className="text-base font-bold text-[#9E7B32] font-mono-tabular mt-0.5">
                 <a
-                  href={getGenericWhatsAppLink()}
+                  href={getWhatsAppChatLink()}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:underline"
                 >
-                  {BUSINESS_INFO.phone}
+                  {storePhone}
                 </a>
               </dd>
             </div>
@@ -102,13 +102,13 @@ export const Contact: React.FC = () => {
           {/* Prominent Chat on WhatsApp Button */}
           <div>
             <a
-              href={getGenericWhatsAppLink()}
+              href={getWhatsAppChatLink()}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full inline-flex items-center justify-center gap-2.5 px-6 py-4 text-xs font-bold tracking-wider bg-[#0A0A0A] hover:bg-[#C5A059] text-[#F6F5F0] hover:text-[#0A0A0A] border border-[#0A0A0A] transition-colors rounded-none whitespace-nowrap"
             >
               <MessageCircle className="w-5 h-5" />
-              <span>"CHAT ON WHATSAPP" ({BUSINESS_INFO.phone})</span>
+              <span>"CHAT ON WHATSAPP" ({storePhone})</span>
             </a>
           </div>
         </div>

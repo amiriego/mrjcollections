@@ -30,6 +30,9 @@ import {
   ProductInput,
   VALIDATION_LIMITS,
   SUBCATEGORIES,
+  BUSINESS_INFO,
+  getOrderWhatsAppLink,
+  getGenericWhatsAppLink,
 } from '../types';
 import { INITIAL_SEED_PRODUCTS, BRAND_ASSETS } from '../data/seedProducts';
 
@@ -86,6 +89,21 @@ interface StoreContextValue {
   deleteProduct: (id: string) => Promise<void>;
   seedCatalogToFirestore: () => Promise<void>;
   syncAllToFirestore: () => Promise<void>;
+  siteName: string;
+  logoUrl: string | null;
+  whatsappNumber: string;
+  phone: string;
+  updateStoreSettings: (settings: {
+    siteName?: string;
+    logoUrl?: string | null;
+    whatsappNumber?: string;
+    phone?: string;
+    backgroundImage?: string;
+  }) => Promise<void>;
+  uploadLogo: (file: File) => Promise<string>;
+  resetLogo: () => Promise<void>;
+  getWhatsAppOrderLink: (productName: string, price: number) => string;
+  getWhatsAppChatLink: (customMessage?: string) => string;
   firestoreProductCount: number;
   uploadProductImage: (file: File) => Promise<string>;
 }
@@ -96,6 +114,10 @@ const LOCAL_PRODUCTS_STORAGE_KEY = 'mrj_collections_catalog_v1';
 const LOCAL_ADMIN_SESSION_KEY = 'mrj_collections_admin_session_v1';
 const LOCAL_ADMIN_PASS_KEY = 'mrj_collections_admin_pass_v1';
 const LOCAL_BG_STORAGE_KEY = 'mrj_collections_bg_v1';
+const LOCAL_SITENAME_STORAGE_KEY = 'mrj_collections_sitename_v1';
+const LOCAL_LOGO_STORAGE_KEY = 'mrj_collections_logo_v1';
+const LOCAL_WHATSAPP_STORAGE_KEY = 'mrj_collections_whatsapp_v1';
+const LOCAL_PHONE_STORAGE_KEY = 'mrj_collections_phone_v1';
 const LOCAL_REGISTERED_USERS_KEY = 'mrj_collections_registered_users_v1';
 const LOCAL_USER_SESSION_KEY = 'mrj_collections_user_session_v1';
 
@@ -293,6 +315,46 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
     return BRAND_ASSETS.backgroundBanner;
   });
 
+  const [siteName, setSiteName] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_SITENAME_STORAGE_KEY);
+      if (saved && saved.trim().length > 0) return saved;
+    } catch {
+      // ignore
+    }
+    return BUSINESS_INFO.name;
+  });
+
+  const [logoUrl, setLogoUrl] = useState<string | null>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_LOGO_STORAGE_KEY);
+      if (saved && saved.trim().length > 0) return saved;
+    } catch {
+      // ignore
+    }
+    return null;
+  });
+
+  const [whatsappNumber, setWhatsappNumber] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_WHATSAPP_STORAGE_KEY);
+      if (saved && saved.trim().length > 0) return saved;
+    } catch {
+      // ignore
+    }
+    return BUSINESS_INFO.whatsappNumber;
+  });
+
+  const [phone, setPhone] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_PHONE_STORAGE_KEY);
+      if (saved && saved.trim().length > 0) return saved;
+    } catch {
+      // ignore
+    }
+    return BUSINESS_INFO.phone;
+  });
+
   const showToast = useCallback(
     (title: string, type: 'success' | 'error' | 'info' = 'success') => {
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -308,6 +370,67 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  const updateStoreSettings = useCallback(
+    async (newSettings: {
+      siteName?: string;
+      logoUrl?: string | null;
+      whatsappNumber?: string;
+      phone?: string;
+      backgroundImage?: string;
+    }) => {
+      const payload: Record<string, unknown> = {
+        updatedAt: serverTimestamp(),
+      };
+
+      if (newSettings.siteName !== undefined) {
+        const cleanName = newSettings.siteName.trim().slice(0, 100) || BUSINESS_INFO.name;
+        setSiteName(cleanName);
+        payload.siteName = cleanName;
+        try { localStorage.setItem(LOCAL_SITENAME_STORAGE_KEY, cleanName); } catch {}
+      }
+
+      if (newSettings.logoUrl !== undefined) {
+        setLogoUrl(newSettings.logoUrl);
+        payload.logoUrl = newSettings.logoUrl;
+        try {
+          if (newSettings.logoUrl) {
+            localStorage.setItem(LOCAL_LOGO_STORAGE_KEY, newSettings.logoUrl);
+          } else {
+            localStorage.removeItem(LOCAL_LOGO_STORAGE_KEY);
+          }
+        } catch {}
+      }
+
+      if (newSettings.whatsappNumber !== undefined) {
+        const cleanWhatsApp = newSettings.whatsappNumber.trim().slice(0, 35) || BUSINESS_INFO.whatsappNumber;
+        setWhatsappNumber(cleanWhatsApp);
+        payload.whatsappNumber = cleanWhatsApp;
+        try { localStorage.setItem(LOCAL_WHATSAPP_STORAGE_KEY, cleanWhatsApp); } catch {}
+      }
+
+      if (newSettings.phone !== undefined) {
+        const cleanPhone = newSettings.phone.trim().slice(0, 35) || BUSINESS_INFO.phone;
+        setPhone(cleanPhone);
+        payload.phone = cleanPhone;
+        try { localStorage.setItem(LOCAL_PHONE_STORAGE_KEY, cleanPhone); } catch {}
+      }
+
+      if (newSettings.backgroundImage !== undefined) {
+        setBackgroundImage(newSettings.backgroundImage);
+        payload.backgroundImage = newSettings.backgroundImage;
+        try { localStorage.setItem(LOCAL_BG_STORAGE_KEY, newSettings.backgroundImage); } catch {}
+      }
+
+      try {
+        await setDoc(doc(db, 'settings', 'store'), payload, { merge: true });
+        showToast('Store settings updated live in Cloud!');
+      } catch (err: unknown) {
+        showToast('Settings saved locally (cloud sync pending)', 'info');
+      }
+    },
+    [showToast]
+  );
+
   const updateBackgroundImage = useCallback(
     async (file: File) => {
       const dataUrl = await compressFileToDataUrl(file);
@@ -318,10 +441,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
         // ignore quota errors
       }
       try {
-        await setDoc(doc(db, 'settings', 'store'), {
-          backgroundImage: dataUrl,
-          updatedAt: serverTimestamp(),
-        });
+        await setDoc(
+          doc(db, 'settings', 'store'),
+          {
+            backgroundImage: dataUrl,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
         showToast('Background banner saved live for all visitors!');
       } catch (err: unknown) {
         showToast('Background banner updated (cloud sync pending)', 'info');
@@ -334,14 +461,76 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
     setBackgroundImage(BRAND_ASSETS.backgroundBanner);
     try {
       localStorage.removeItem(LOCAL_BG_STORAGE_KEY);
-      await deleteDoc(doc(db, 'settings', 'store'));
+      await setDoc(
+        doc(db, 'settings', 'store'),
+        {
+          backgroundImage: null,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
     } catch {
       // ignore
     }
     showToast('Restored default streetwear background', 'info');
   }, [showToast]);
 
-  // Listen to Firestore /settings/store for real-time background banner changes
+  const uploadLogo = useCallback(
+    async (file: File) => {
+      const dataUrl = await compressFileToDataUrl(file);
+      setLogoUrl(dataUrl);
+      try { localStorage.setItem(LOCAL_LOGO_STORAGE_KEY, dataUrl); } catch {}
+      try {
+        await setDoc(
+          doc(db, 'settings', 'store'),
+          {
+            logoUrl: dataUrl,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+        showToast('New store logo saved live for all visitors!');
+      } catch {
+        showToast('Logo updated locally (cloud sync pending)', 'info');
+      }
+      return dataUrl;
+    },
+    [showToast]
+  );
+
+  const resetLogo = useCallback(async () => {
+    setLogoUrl(null);
+    try { localStorage.removeItem(LOCAL_LOGO_STORAGE_KEY); } catch {}
+    try {
+      await setDoc(
+        doc(db, 'settings', 'store'),
+        {
+          logoUrl: null,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+      showToast('Restored default gold emblem logo', 'info');
+    } catch {
+      showToast('Logo restored locally', 'info');
+    }
+  }, [showToast]);
+
+  const getWhatsAppOrderLink = useCallback(
+    (productName: string, price: number) => {
+      return getOrderWhatsAppLink(productName, price, whatsappNumber, siteName);
+    },
+    [whatsappNumber, siteName]
+  );
+
+  const getWhatsAppChatLink = useCallback(
+    (customMessage?: string) => {
+      return getGenericWhatsAppLink(customMessage, whatsappNumber, siteName);
+    },
+    [whatsappNumber, siteName]
+  );
+
+  // Listen to Firestore /settings/store for real-time site identity & background changes
   useEffect(() => {
     const unsubSettings = onSnapshot(
       doc(db, 'settings', 'store'),
@@ -356,6 +545,42 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
               // ignore
             }
           }
+          if (data?.siteName && typeof data.siteName === 'string') {
+            setSiteName(data.siteName);
+            try {
+              localStorage.setItem(LOCAL_SITENAME_STORAGE_KEY, data.siteName);
+            } catch {
+              // ignore
+            }
+          }
+          if (data?.logoUrl !== undefined) {
+            setLogoUrl(data.logoUrl || null);
+            try {
+              if (data.logoUrl) {
+                localStorage.setItem(LOCAL_LOGO_STORAGE_KEY, data.logoUrl);
+              } else {
+                localStorage.removeItem(LOCAL_LOGO_STORAGE_KEY);
+              }
+            } catch {
+              // ignore
+            }
+          }
+          if (data?.whatsappNumber && typeof data.whatsappNumber === 'string') {
+            setWhatsappNumber(data.whatsappNumber);
+            try {
+              localStorage.setItem(LOCAL_WHATSAPP_STORAGE_KEY, data.whatsappNumber);
+            } catch {
+              // ignore
+            }
+          }
+          if (data?.phone && typeof data.phone === 'string') {
+            setPhone(data.phone);
+            try {
+              localStorage.setItem(LOCAL_PHONE_STORAGE_KEY, data.phone);
+            } catch {
+              // ignore
+            }
+          }
         }
       },
       () => {
@@ -364,6 +589,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
     );
     return () => unsubSettings();
   }, []);
+
+  // Dynamically update document title with active site name
+  useEffect(() => {
+    if (siteName) {
+      document.title = `${siteName} | Quality & Affordable Fashion in Tarkwa`;
+    }
+  }, [siteName]);
 
   // Listen to Firebase Auth state
   useEffect(() => {
@@ -915,6 +1147,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
         syncAllToFirestore,
         firestoreProductCount: firestoreProducts.length,
         uploadProductImage,
+        siteName,
+        logoUrl,
+        whatsappNumber,
+        phone,
+        updateStoreSettings,
+        uploadLogo,
+        resetLogo,
+        getWhatsAppOrderLink,
+        getWhatsAppChatLink,
       }}
     >
       {children}

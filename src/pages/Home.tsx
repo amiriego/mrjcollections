@@ -2,10 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, MessageCircle, Search, X } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
-import { BUSINESS_INFO, getGenericWhatsAppLink } from '../types';
+import { BUSINESS_INFO } from '../types';
 import { BRAND_ASSETS } from '../data/seedProducts';
 import { ProductCard } from '../components/ProductCard';
-import { BrandBagEmblem } from '../components/BrandLogo';
+import { StoreLogo } from '../components/BrandLogo';
 import { StreetwearBrandsShowcase } from '../components/StreetwearBrandsWall';
 
 export const Home: React.FC = () => {
@@ -13,6 +13,10 @@ export const Home: React.FC = () => {
     products,
     loadingProducts,
     backgroundImage,
+    siteName,
+    logoUrl,
+    phone,
+    getWhatsAppChatLink,
   } = useStore();
   const navigate = useNavigate();
   const [heroImgError, setHeroImgError] = useState(false);
@@ -92,10 +96,14 @@ export const Home: React.FC = () => {
             {/* Provenance Row */}
             <div className="flex items-center justify-between gap-4 border-b border-white/20 pb-5">
               <div className="flex items-center gap-3.5">
-                <BrandBagEmblem className="w-12 h-12 shrink-0 border border-[#C5A059]" />
+                <StoreLogo
+                  className="w-12 h-12 shrink-0 border border-[#C5A059]"
+                  logoUrl={logoUrl}
+                  siteName={siteName}
+                />
                 <div className="text-xs font-mono-tabular text-[#F6F5F0]">
                   <p className="font-semibold">
-                    {BUSINESS_INFO.name}™ c/o {BUSINESS_INFO.location}
+                    {siteName}™ c/o {BUSINESS_INFO.location}
                   </p>
                   <p className="text-[#C7C4BC] mt-0.5">
                     "{BUSINESS_INFO.tagline}" · {BUSINESS_INFO.delivery}
@@ -118,7 +126,7 @@ export const Home: React.FC = () => {
                 Curated streetwear, monochrome footwear, luxury fragrances,
                 structured handbags, and statement timepieces from{' '}
                 <strong className="text-[#C5A059] font-semibold">
-                  {BUSINESS_INFO.name}
+                  {siteName}
                 </strong>{' '}
                 in {BUSINESS_INFO.location}. Instant WhatsApp ordering with direct
                 dispatch across Ghana.
@@ -135,7 +143,7 @@ export const Home: React.FC = () => {
                 </Link>
 
                 <a
-                  href={getGenericWhatsAppLink()}
+                  href={getWhatsAppChatLink()}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center gap-2.5 px-7 py-4 text-xs font-bold tracking-wider bg-[#0A0A0A]/80 text-[#F6F5F0] hover:bg-[#F6F5F0] hover:text-[#0A0A0A] border border-[#F6F5F0] transition-colors rounded-none whitespace-nowrap"
@@ -167,9 +175,9 @@ export const Home: React.FC = () => {
                   />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center p-10 text-center bg-[#FFFFFF] text-[#0A0A0A]">
-                    <BrandBagEmblem className="w-24 h-24 mb-4" />
+                    <StoreLogo className="w-24 h-24 mb-4" logoUrl={logoUrl} siteName={siteName} />
                     <p className="font-display text-2xl font-bold">
-                      {BUSINESS_INFO.name}
+                      {siteName}
                     </p>
                   </div>
                 )}
@@ -187,7 +195,7 @@ export const Home: React.FC = () => {
                     </p>
                   </div>
                   <span className="text-xs font-mono-tabular px-2.5 py-1 bg-[#0A0A0A] border border-[#C5A059] text-[#C5A059] whitespace-nowrap">
-                    {BUSINESS_INFO.phone}
+                    {phone}
                   </span>
                 </div>
               </div>

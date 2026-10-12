@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingBag, MessageCircle } from 'lucide-react';
-import { Product, formatPrice, getOrderWhatsAppLink } from '../types';
+import { Product, formatPrice } from '../types';
+import { useStore } from '../context/StoreContext';
 
 interface ProductCardProps {
   product: Product;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  const { getWhatsAppOrderLink } = useStore();
   const [imageError, setImageError] = useState(false);
 
   const primaryImage = product.images?.[0] || '';
@@ -95,7 +97,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </Link>
 
           <a
-            href={getOrderWhatsAppLink(product.name, effectivePrice)}
+            href={getWhatsAppOrderLink(product.name, effectivePrice)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-bold text-[#F6F5F0] bg-[#0A0A0A] hover:bg-[#C5A059] hover:text-[#0A0A0A] border border-[#0A0A0A] transition-colors whitespace-nowrap truncate rounded-none"

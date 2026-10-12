@@ -95,14 +95,32 @@ export const BUSINESS_INFO = {
   defaultEnquiryMessage: 'Hello Mr. J Collections, I would like to make an enquiry.',
 } as const;
 
-export function getGenericWhatsAppLink(customMessage?: string): string {
-  const text = customMessage ?? BUSINESS_INFO.defaultEnquiryMessage;
-  return `${BUSINESS_INFO.whatsappBaseUrl}?text=${encodeURIComponent(text)}`;
+export function formatWhatsAppUrl(numberInput: string, text?: string): string {
+  let digits = numberInput.replace(/\D/g, '');
+  if (digits.startsWith('0') && digits.length === 10) {
+    digits = '233' + digits.slice(1);
+  }
+  const base = `https://wa.me/${digits || '233594326515'}`;
+  return text ? `${base}?text=${encodeURIComponent(text)}` : base;
 }
 
-export function getOrderWhatsAppLink(productName: string, price: number): string {
-  const message = `Hello Mr. J Collections, I want to order:\n\nProduct: ${productName}\nPrice: GH₵${price}\n\nPlease send me the payment details and delivery information.`;
-  return `${BUSINESS_INFO.whatsappBaseUrl}?text=${encodeURIComponent(message)}`;
+export function getGenericWhatsAppLink(
+  customMessage?: string,
+  whatsappNumber: string = BUSINESS_INFO.whatsappNumber,
+  siteName: string = BUSINESS_INFO.name
+): string {
+  const text = customMessage ?? `Hello ${siteName}, I would like to make an enquiry.`;
+  return formatWhatsAppUrl(whatsappNumber, text);
+}
+
+export function getOrderWhatsAppLink(
+  productName: string,
+  price: number,
+  whatsappNumber: string = BUSINESS_INFO.whatsappNumber,
+  siteName: string = BUSINESS_INFO.name
+): string {
+  const message = `Hello ${siteName}, I want to order:\n\nProduct: ${productName}\nPrice: GH₵${price}\n\nPlease send me the payment details and delivery information.`;
+  return formatWhatsAppUrl(whatsappNumber, message);
 }
 
 export function formatPrice(amount: number): string {

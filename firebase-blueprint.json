@@ -126,6 +126,30 @@
           "minLength": 1,
           "maxLength": 1000000
         },
+        "siteName": {
+          "type": "string",
+          "description": "Store branding name displayed across the website.",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "logoUrl": {
+          "type": "string",
+          "description": "Custom store logo data URL or image path.",
+          "minLength": 1,
+          "maxLength": 1000000
+        },
+        "whatsappNumber": {
+          "type": "string",
+          "description": "WhatsApp contact digits used for customer enquiries and checkout.",
+          "minLength": 5,
+          "maxLength": 35
+        },
+        "phone": {
+          "type": "string",
+          "description": "Display contact phone number shown across the site.",
+          "minLength": 5,
+          "maxLength": 35
+        },
         "updatedAt": {
           "type": "string",
           "format": "date-time",

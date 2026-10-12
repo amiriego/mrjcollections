@@ -11,7 +11,7 @@ import {
 
 export const ProductDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { products } = useStore();
+  const { products, getWhatsAppOrderLink, getWhatsAppChatLink, phone } = useStore();
 
   const product = products.find((p) => p.id === id);
 
@@ -250,7 +250,7 @@ export const ProductDetails: React.FC = () => {
           {/* Primary Actions: Buy Now (WhatsApp pre-filled order) + Chat on WhatsApp */}
           <div className="space-y-3 pt-4 border-t border-[#0A0A0A]">
             <a
-              href={getOrderWhatsAppLink(product.name, effectivePrice)}
+              href={getWhatsAppOrderLink(product.name, effectivePrice)}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 text-xs font-bold tracking-wider bg-[#0A0A0A] text-[#F6F5F0] hover:bg-[#C5A059] hover:text-[#0A0A0A] border border-[#0A0A0A] transition-colors rounded-none whitespace-nowrap"
@@ -260,7 +260,7 @@ export const ProductDetails: React.FC = () => {
             </a>
 
             <a
-              href={getGenericWhatsAppLink()}
+              href={getWhatsAppChatLink()}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 text-xs font-bold tracking-wider bg-[#F6F5F0] text-[#0A0A0A] hover:bg-[#0A0A0A] hover:text-[#F6F5F0] border border-[#0A0A0A] transition-colors rounded-none whitespace-nowrap"
@@ -278,7 +278,7 @@ export const ProductDetails: React.FC = () => {
               Dispatch: <span className="text-[#0A0A0A]">{BUSINESS_INFO.delivery}</span>
             </p>
             <p>
-              WhatsApp Desk: <span className="text-[#0A0A0A]">{BUSINESS_INFO.phone}</span>
+              WhatsApp Desk: <span className="text-[#0A0A0A]">{phone}</span>
             </p>
           </div>
         </div>

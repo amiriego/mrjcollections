@@ -122,3 +122,43 @@ export const BrandBagEmblem: React.FC<BrandBagEmblemProps> = ({ className = 'w-1
     </svg>
   );
 };
+
+export interface StoreLogoProps {
+  className?: string;
+  logoUrl?: string | null;
+  siteName?: string;
+  badgeBorder?: boolean;
+}
+
+export const StoreLogo: React.FC<StoreLogoProps> = ({
+  className = 'w-12 h-12',
+  logoUrl,
+  siteName = 'Mr. J Collections',
+  badgeBorder = false,
+}) => {
+  const [imgErr, setImgErr] = React.useState(false);
+
+  // Reset imgErr if logoUrl changes
+  React.useEffect(() => {
+    setImgErr(false);
+  }, [logoUrl]);
+
+  if (logoUrl && !imgErr) {
+    return (
+      <div
+        className={`${className} overflow-hidden bg-[#070708] flex items-center justify-center shrink-0 ${
+          badgeBorder ? 'border border-[#C5A059]/60' : ''
+        }`}
+      >
+        <img
+          src={logoUrl}
+          alt={siteName}
+          onError={() => setImgErr(true)}
+          className="w-full h-full object-contain p-0.5"
+        />
+      </div>
+    );
+  }
+
+  return <BrandBagEmblem className={className} />;
+};

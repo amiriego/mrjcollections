@@ -96,8 +96,12 @@ service cloud.firestore {
 
     function isValidSettings(data) {
       return data.keys().hasAll(['updatedAt']) &&
-        data.keys().hasOnly(['backgroundImage', 'updatedAt']) &&
+        data.keys().hasOnly(['backgroundImage', 'siteName', 'logoUrl', 'whatsappNumber', 'phone', 'updatedAt']) &&
         (data.backgroundImage == null || (data.backgroundImage is string && data.backgroundImage.size() >= 1 && data.backgroundImage.size() <= 1000000)) &&
+        (data.siteName == null || (data.siteName is string && data.siteName.size() >= 1 && data.siteName.size() <= 100)) &&
+        (data.logoUrl == null || (data.logoUrl is string && data.logoUrl.size() >= 1 && data.logoUrl.size() <= 1000000)) &&
+        (data.whatsappNumber == null || (data.whatsappNumber is string && data.whatsappNumber.size() >= 5 && data.whatsappNumber.size() <= 35)) &&
+        (data.phone == null || (data.phone is string && data.phone.size() >= 5 && data.phone.size() <= 35)) &&
         data.updatedAt is timestamp;
     }
 

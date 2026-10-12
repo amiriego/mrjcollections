@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { MessageCircle, UserCheck, LogIn, UserPlus, LogOut } from 'lucide-react';
-import { BUSINESS_INFO, getGenericWhatsAppLink } from '../types';
-import { BrandBagEmblem } from './BrandLogo';
+import { BUSINESS_INFO } from '../types';
+import { StoreLogo } from './BrandLogo';
 import { useStore } from '../context/StoreContext';
 
 export const Footer: React.FC = () => {
@@ -12,6 +12,10 @@ export const Footer: React.FC = () => {
     currentUserEmail,
     currentUserName,
     logout,
+    siteName,
+    logoUrl,
+    phone,
+    getWhatsAppChatLink,
   } = useStore();
 
   return (
@@ -24,13 +28,17 @@ export const Footer: React.FC = () => {
           {/* Column 1: Brand Identity */}
           <div className="space-y-4 lg:col-span-1">
             <div className="flex items-center gap-3.5">
-              <BrandBagEmblem className="w-12 h-12 shrink-0 border border-white/20" />
+              <StoreLogo
+                className="w-12 h-12 shrink-0 border border-white/20"
+                logoUrl={logoUrl}
+                siteName={siteName}
+              />
               <div>
                 <Link
                   to="/"
                   className="font-display text-xl font-extrabold text-[#F6F5F0] hover:text-[#C5A059] transition-colors block"
                 >
-                  {BUSINESS_INFO.name}™
+                  {siteName}™
                 </Link>
                 <p className="text-xs font-mono-tabular text-[#C5A059] mt-0.5">
                   "{BUSINESS_INFO.tagline}"
@@ -197,12 +205,12 @@ export const Footer: React.FC = () => {
               <p>
                 WhatsApp / Phone:{' '}
                 <a
-                  href={getGenericWhatsAppLink()}
+                  href={getWhatsAppChatLink()}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[#F6F5F0] hover:text-[#C5A059] transition-colors font-mono-tabular font-semibold"
                 >
-                  {BUSINESS_INFO.phone}
+                  {phone}
                 </a>
               </p>
               <p>
@@ -213,7 +221,7 @@ export const Footer: React.FC = () => {
               </p>
               <div className="pt-2">
                 <a
-                  href={getGenericWhatsAppLink()}
+                  href={getWhatsAppChatLink()}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-[#0A0A0A] bg-[#C5A059] hover:bg-[#F6F5F0] transition-colors rounded-none whitespace-nowrap"
@@ -227,7 +235,7 @@ export const Footer: React.FC = () => {
         </div>
 
         <div className="mt-12 pt-8 border-t border-white/15 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono-tabular text-[#8C8982]">
-          <p>© 2026 Mr. J Collections. All rights reserved.</p>
+          <p>© 2026 {siteName}. All rights reserved.</p>
           <div className="flex flex-wrap items-center gap-4">
             <Link
               to="/auth?mode=signin"

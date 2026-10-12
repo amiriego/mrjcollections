@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Menu, X, Search } from 'lucide-react';
-import { BUSINESS_INFO } from '../types';
+import { useStore } from '../context/StoreContext';
+import { StoreLogo } from './BrandLogo';
 
 export const Navbar: React.FC = () => {
+  const { siteName, logoUrl } = useStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -49,13 +51,19 @@ export const Navbar: React.FC = () => {
   return (
     <header className="sticky top-0 z-40 bg-[#F6F5F0]/95 backdrop-blur-md border-b border-[#0A0A0A]">
       <div className="max-w-[1440px] mx-auto px-5 sm:px-8 h-16 flex items-center justify-between gap-4">
-        {/* Zone 1: Single text element wordmark */}
+        {/* Zone 1: Brand logo + dynamic site name */}
         <Link
           to="/"
           onClick={() => setMobileMenuOpen(false)}
-          className="font-display text-lg sm:text-xl font-extrabold tracking-tight text-[#0A0A0A] hover:text-[#9E7B32] transition-colors whitespace-nowrap shrink-0"
+          className="flex items-center gap-2.5 font-display text-lg sm:text-xl font-extrabold tracking-tight text-[#0A0A0A] hover:text-[#9E7B32] transition-colors whitespace-nowrap shrink-0 group"
         >
-          {BUSINESS_INFO.name}™
+          <StoreLogo
+            className="w-8 h-8 rounded-none shrink-0"
+            logoUrl={logoUrl}
+            siteName={siteName}
+            badgeBorder={false}
+          />
+          <span>{siteName}™</span>
         </Link>
 
         {/* Zone 2: 4 clean text navigation links */}
